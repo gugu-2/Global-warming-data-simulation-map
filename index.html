@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Warming Sea Level Simulator</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #2c3e50);
+            color: white;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 15px 0;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+        }
+        
+        #map {
+            flex: 3;
+            height: 100%;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+            z-index: 1;
+        }
+        
+        .control-panel {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        
+        .slider-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+        }
+        
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .slider-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 25px;
+            -webkit-appearance: none;
+            background: linear-gradient(to right, #3498db, #2ecc71, #f1c40f, #e67e22, #e74c3c);
+            border-radius: 12px;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        
+        .level-display {
+            text-align: center;
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #f1c40f;
+            text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);
+        }
+        
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            flex: 1;
+        }
+        
+        .info-content {
+            line-height: 1.6;
+            font-size: 1.1rem;
+        }
+        
+        .info-content p {
+            margin-bottom: 15px;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .current {
+            background: #3498db;
+        }
+        
+        .future {
+            background: #e74c3c;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        .impact-stats {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .warning {
+            color: #e74c3c;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(231, 76, 60, 0.2);
+            border-radius: 8px;
+        }
+        
+        @media (max-width: 900px) {
+            .content {
+                flex-direction: column;
+            }
+            
+            #map {
+                height: 60vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Global Warming Sea Level Simulator</h1>
+            <div class="subtitle">Visualize the impact of rising sea levels on our planet</div>
+        </header>
+        
+        <div class="content">
+            <div id="map"></div>
+            
+            <div class="control-panel">
+                <div class="slider-container">
+                    <h2>Sea Level Rise</h2>
+                    <div class="slider-wrapper">
+                        <input type="range" id="seaLevelSlider" min="0" max="1000" value="0">
+                        <div class="level-display"><span id="levelValue">0</span> meters</div>
+                    </div>
+                </div>
+                
+                <div class="info-panel">
+                    <h2>Impact Information</h2>
+                    <div class="info-content">
+                        <p>As global temperatures rise, ice sheets and glaciers melt, causing sea levels to increase.</p>
+                        <p>Current projections estimate a rise of 0.5 to 2 meters by 2100.</p>
+                        <p>At extreme levels, major coastal cities and islands would be submerged.</p>
+                        
+                        <div class="impact-stats">
+                            <div class="stat-item">
+                                <span>Land Area Lost:</span>
+                                <span id="landLost">0%</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>Population Affected:</span>
+                                <span id="populationAffected">0 million</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>Cities Submerged:</span>
+                                <span id="citiesSubmerged">0</span>
+                            </div>
+                        </div>
+                        
+                        <div class="warning" id="warningMessage"></div>
+                    </div>
+                </div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color current"></div>
+                        <span>Current Land</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color future"></div>
+                        <span>Flooded Area</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Global Warming Sea Level Simulator | Visualizing Climate Change Impact</p>
+        </footer>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([20, 0], 2);
+        
+        // Base map layers
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+        
+        const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        });
+        
+        // Add satellite layer as default
+        satelliteLayer.addTo(map);
+        
+        // Create a layer group for flood areas
+        const floodLayer = L.layerGroup().addTo(map);
+        
+        // Get DOM elements
+        const seaLevelSlider = document.getElementById('seaLevelSlider');
+        const levelValue = document.getElementById('levelValue');
+        const landLost = document.getElementById('landLost');
+        const populationAffected = document.getElementById('populationAffected');
+        const citiesSubmerged = document.getElementById('citiesSubmerged');
+        const warningMessage = document.getElementById('warningMessage');
+        
+        // Function to generate flood polygons based on sea level
+        function generateFloodAreas(seaLevel) {
+            // Clear previous flood areas
+            floodLayer.clearLayers();
+            
+            // Calculate impact statistics
+            const landLossPercent = Math.min(100, (seaLevel / 1000) * 40).toFixed(1);
+            const population = Math.min(6000, (seaLevel / 1000) * 4000).toFixed(0);
+            const cities = Math.min(500, Math.floor((seaLevel / 1000) * 400));
+            
+            landLost.textContent = `${landLossPercent}%`;
+            populationAffected.textContent = `${population} million`;
+            citiesSubmerged.textContent = cities;
+            
+            // Update warning message
+            if (seaLevel >= 1000) {
+                warningMessage.textContent = "EXTREME SCENARIO: Most coastal regions and islands completely submerged";
+            } else if (seaLevel >= 500) {
+                warningMessage.textContent = "SEVERE IMPACT: Major cities and large regions underwater";
+            } else if (seaLevel >= 200) {
+                warningMessage.textContent = "SIGNIFICANT IMPACT: Many coastal cities affected";
+            } else if (seaLevel >= 50) {
+                warningMessage.textContent = "MODERATE IMPACT: Low-lying areas at risk";
+            } else {
+                warningMessage.textContent = "";
+            }
+            
+            if (seaLevel === 0) return;
+            
+            // Generate flood polygons based on sea level
+            const floodIntensity = Math.min(0.9, seaLevel / 1000);
+            
+            // Major flood zones that expand with sea level rise
+            const floodZones = [];
+            
+            // Coastal areas around the world
+            const coastalRegions = [
+                // Eastern US
+                [[45, -70], [40, -72], [35, -75], [30, -78], [25, -80]],
+                // Western US
+                [[48, -124], [45, -123], [40, -122], [35, -120], [32, -117]],
+                // Western Europe
+                [[55, -5], [52, -2], [50, 2], [48, 5], [45, 8]],
+                // Eastern Europe
+                [[60, 25], [55, 28], [50, 30], [45, 32], [40, 35]],
+                // East Asia
+                [[45, 120], [40, 125], [35, 130], [30, 135], [25, 140]],
+                // South Asia
+                [[25, 70], [20, 75], [15, 80], [10, 85], [5, 90]],
+                // Southeast Asia
+                [[15, 95], [10, 100], [5, 105], [0, 110], [-5, 115]],
+                // Australia
+                [[-10, 120], [-15, 125], [-20, 130], [-25, 135], [-30, 140]],
+                // South America
+                [[10, -70], [5, -65], [0, -60], [-5, -55], [-10, -50]],
+                // Africa
+                [[35, -10], [30, -5], [25, 0], [20, 5], [15, 10]],
+                // Middle East
+                [[35, 35], [30, 40], [25, 45], [20, 50], [15, 55]]
+            ];
+            
+            // Generate flood polygons for each coastal region
+            coastalRegions.forEach(region => {
+                // Create expanded flood zone based on sea level
+                const expandedRegion = region.map(coord => {
+                    const lat = coord[0];
+                    const lng = coord[1];
+                    // Expand based on sea level
+                    const expansion = seaLevel / 30;
+                    return [lat + (Math.random() - 0.5) * expansion, lng + (Math.random() - 0.5) * expansion];
+                });
+                
+                // Create polygon with varying opacity based on sea level
+                const polygon = L.polygon(expandedRegion, {
+                    color: '#e74c3c',
+                    fillColor: '#e74c3c',
+                    fillOpacity: floodIntensity * 0.7,
+                    weight: 1
+                }).addTo(floodLayer);
+            });
+            
+            // Add low-lying areas that flood at lower levels
+            if (seaLevel > 50) {
+                const lowLyingAreas = [
+                    // Netherlands
+                    [[53, 6], [52, 5], [51, 6], [52, 7]],
+                    // Bangladesh
+                    [[25, 88], [24, 89], [23, 90], [24, 91]],
+                    // Maldives
+                    [[4, 73], [3, 72], [2, 73], [3, 74]],
+                    // Marshall Islands
+                    [[10, 165], [9, 166], [8, 167], [9, 168]],
+                    // Tuvalu
+                    [[-8, 178], [-9, 179], [-10, 180], [-9, 181]],
+                    // Kiribati
+                    [[1, 173], [0, 174], [-1, 175], [0, 176]]
+                ];
+                
+                lowLyingAreas.forEach(area => {
+                    const polygon = L.polygon(area, {
+                        color: '#e74c3c',
+                        fillColor: '#e74c3c',
+                        fillOpacity: Math.min(0.9, floodIntensity * 0.9),
+                        weight: 1
+                    }).addTo(floodLayer);
+                });
+            }
+            
+            // Add major cities that get submerged at high levels
+            if (seaLevel > 100) {
+                const majorCities = [
+                    [40.7128, -74.0060], // New York
+                    [51.5074, -0.1278],  // London
+                    [35.6895, 139.6917], // Tokyo
+                    [34.0522, -118.2437], // Los Angeles
+                    [48.8566, 2.3522],   // Paris
+                    [41.9028, 12.4964],  // Rome
+                    [39.9042, 116.4074], // Beijing
+                    [31.2304, 121.4737], // Shanghai
+                    [22.3964, 114.1095], // Hong Kong
+                    [1.3521, 103.8198],  // Singapore
+                    [-33.8688, 151.2093], // Sydney
+                    [39.9334, 32.8597],  // Ankara
+                    [30.0444, 31.2357],  // Cairo
+                    [19.0760, 72.8777],  // Mumbai
+                    [-23.5505, -46.6333], // São Paulo
+                    [14.5995, 120.9842], // Manila
+                    [25.7617, -80.1918], // Miami
+                    [40.4168, -3.7038],  // Madrid
+                    [55.7558, 37.6176],  // Moscow
+                    [52.5200, 13.4050]   // Berlin
+                ];
+                
+                majorCities.forEach(city => {
+                    L.circle(city, {
+                        radius: seaLevel * 150,
+                        color: '#e74c3c',
+                        fillColor: '#e74c3c',
+                        fillOpacity: floodIntensity * 0.5
+                    }).addTo(floodLayer);
+                });
+            }
+            
+            // At very high levels, add large ocean expansion
+            if (seaLevel > 300) {
+                // Create expanding ocean areas
+                const oceanExpansion = [
+                    // Atlantic expansion
+                    [[40, -40], [30, -35], [20, -45], [10, -50]],
+                    // Pacific expansion
+                    [[20, -150], [10, -140], [0, -160], [-10, -150]],
+                    // Indian Ocean expansion
+                    [[10, 70], [0, 80], [-10, 90], [0, 100]],
+                    // Arctic expansion
+                    [[70, -100], [75, -50], [80, 0], [75, 50], [70, 100]]
+                ];
+                
+                oceanExpansion.forEach(area => {
+                    const expandedArea = area.map(coord => {
+                        const lat = coord[0];
+                        const lng = coord[1];
+                        const expansion = (seaLevel - 300) / 80;
+                        return [lat + (Math.random() - 0.5) * expansion, lng + (Math.random() - 0.5) * expansion];
+                    });
+                    
+                    L.polygon(expandedArea, {
+                        color: '#e74c3c',
+                        fillColor: '#e74c3c',
+                        fillOpacity: floodIntensity * 0.6,
+                        weight: 1
+                    }).addTo(floodLayer);
+                });
+            }
+            
+            // At extreme levels (800+), add massive flooding
+            if (seaLevel > 800) {
+                // Massive inland flooding
+                const massiveFloodZones = [
+                    // Central US
+                    [[45, -95], [40, -90], [35, -95], [40, -100]],
+                    // Central Europe
+                    [[50, 10], [45, 15], [40, 10], [45, 5]],
+                    // Central Asia
+                    [[45, 65], [40, 70], [35, 65], [40, 60]],
+                    // Central Africa
+                    [[10, 20], [5, 25], [0, 20], [5, 15]],
+                    // Central South America
+                    [[-10, -60], [-15, -55], [-20, -60], [-15, -65]]
+                ];
+                
+                massiveFloodZones.forEach(zone => {
+                    const expandedZone = zone.map(coord => {
+                        const lat = coord[0];
+                        const lng = coord[1];
+                        const expansion = (seaLevel - 800) / 50;
+                        return [lat + (Math.random() - 0.5) * expansion, lng + (Math.random() - 0.5) * expansion];
+                    });
+                    
+                    L.polygon(expandedZone, {
+                        color: '#ff0000',
+                        fillColor: '#ff0000',
+                        fillOpacity: floodIntensity * 0.7,
+                        weight: 1
+                    }).addTo(floodLayer);
+                });
+            }
+        }
+        
+        // Update map when slider changes
+        seaLevelSlider.addEventListener('input', function() {
+            const seaLevel = parseInt(this.value);
+            levelValue.textContent = seaLevel;
+            generateFloodAreas(seaLevel);
+            
+            // Change map style based on sea level
+            if (seaLevel >= 800) {
+                if (map.hasLayer(satelliteLayer)) {
+                    map.removeLayer(satelliteLayer);
+                    darkLayer.addTo(map);
+                }
+            } else if (seaLevel >= 400) {
+                if (map.hasLayer(satelliteLayer)) {
+                    map.removeLayer(satelliteLayer);
+                    darkLayer.addTo(map);
+                }
+            } else {
+                if (map.hasLayer(darkLayer)) {
+                    map.removeLayer(darkLayer);
+                    satelliteLayer.addTo(map);
+                }
+            }
+        });
+        
+        // Initialize with current sea level (0 meters)
+        generateFloodAreas(0);
+        
+        // Add some sample markers for major cities
+        const cities = [
+            {name: "New York", coords: [40.7128, -74.0060]},
+            {name: "London", coords: [51.5074, -0.1278]},
+            {name: "Tokyo", coords: [35.6895, 139.6917]},
+            {name: "Sydney", coords: [-33.8688, 151.2093]},
+            {name: "Rio de Janeiro", coords: [-22.9068, -43.1729]},
+            {name: "Cairo", coords: [30.0444, 31.2357]},
+            {name: "Mumbai", coords: [19.0760, 72.8777]},
+            {name: "Shanghai", coords: [31.2304, 121.4737]},
+            {name: "Miami", coords: [25.7617, -80.1918]},
+            {name: "Amsterdam", coords: [52.3676, 4.9041]}
+        ];
+        
+        cities.forEach(city => {
+            L.marker(city.coords)
+                .addTo(map)
+                .bindPopup(`<b>${city.name}</b><br>Major coastal city`);
+        });
+    </script>
+</body>
+</html>
